@@ -1,4 +1,6 @@
 using FlightManegement.Data;
+using FlightManegement.Interfaces;
+using FlightManegement.Services;
 using Microsoft.EntityFrameworkCore;
 
 
@@ -13,6 +15,8 @@ builder.Services.AddDbContext<FlightManagementDbContext>(options => {
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddScoped<IFlightService, FlightService>();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
