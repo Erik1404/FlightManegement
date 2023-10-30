@@ -2,7 +2,6 @@
 using FlightManegement.Interfaces;
 using FlightManegement.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Data.Entity;
 
 namespace FlightManegement.Services
 {
