@@ -1,120 +1,226 @@
-﻿using FlightManegement.Data;
-using FlightManegement.Models;
-using FlightManegement.Interfaces;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using System.Security.Cryptography;
-using System.Text;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.IdentityModel.Tokens;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using FlightManegement.Data;
+using FlightManegement.Interfaces;
+using FlightManegement.Models;
+using Microsoft.AspNetCore.Mvc;
 
 namespace FlightManegement.Services
 {
     public class UserService : IUserService
     {
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly FlightManagementDbContext _dbContext;
+        private readonly IConfiguration _configuration;
 
-        public UserService(FlightManagementDbContext dbContext)
+        public UserService(IHttpContextAccessor httpContextAccessor, FlightManagementDbContext dbContext, IConfiguration configuration)
         {
+            _httpContextAccessor = httpContextAccessor;
             _dbContext = dbContext;
+            _configuration = configuration;
         }
-        public User Register(string userName, string email, string password,string confirmpassword, DateTime dateOfBirth, string address)
+
+        public async Task<User> Register(string username, string password, string email, string address, string phoneNumber, DateTime dateOfBirth, string confirmPassword)
         {
-            // Kiểm tra định dạng email
-            if (!IsValidEmail(email))
+            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password) || string.IsNullOrEmpty(email) || string.IsNullOrEmpty(address) || string.IsNullOrEmpty(phoneNumber))
             {
-                throw new Exception("Email không hợp lệ.");
-            }
-            // Kiểm tra xác nhận mật khẩu
-            if (password != confirmpassword)
-            {
-                throw new Exception("Mật khẩu và xác nhận mật khẩu không khớp.");
+                throw new Exception("Thiếu thông tin");
             }
 
-            if (_dbContext.Users.Any(u => u.UserName == userName || u.Email == email))
+            var existingUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Username == username || u.Email == email);
+            if (existingUser != null)
             {
-                throw new Exception("Tài khoản này có vẻ đã được đăng ký");
+                throw new Exception("Tài khoản này đã được đăng ký.");
             }
+
+            // Tạo hash mật khẩu
+            CreatePasswordHash(password, out byte[] passwordHash, out byte[] passwordSalt);
+
             string role;
-            string usercode;
+            string userCode;
             if (email.EndsWith("@Admin.com"))
             {
                 role = "Admin";
-                // Tìm số lớn nhất của UserID cho Role là "Admin"
-                int maxUserId = _dbContext.Users
-                    .Where(u => u.Role == "Admin")
-                    .Max(u => (int?)u.UserId) ?? 0;
+
+                var adminUsers = _dbContext.Users.Where(u => u.Role == "Admin").AsEnumerable();
+
+                // Tìm số lớn nhất của UserCode cho Role là "Admin"
+                int maxAdminCodeNumber = adminUsers
+                    .Select(u => int.Parse(u.UserCode.Substring("Admin".Length)))
+                    .DefaultIfEmpty(0)
+                    .Max();
 
                 // Tạo UserCode cho "Admin" với định dạng "Admin + {001}" tăng dần
-                usercode = $"Admin{maxUserId + 1:D3}";
+                userCode = $"Admin{maxAdminCodeNumber + 1:D3}"; // D3 để đảm bảo có ba chữ số
             }
             else
             {
                 role = "Nhân viên này chưa được bổ nhiệm chức vụ nào";
-                usercode = "Chưa có chức vụ";
+                userCode = "Chưa có";
             }
-            var user = new User
+
+            // Tạo đối tượng User mới
+            var newUser = new User
             {
-                UserCode = usercode,
-                UserName = userName,
+                Username = username,
+                PasswordHash = passwordHash,
+                PasswordSalt = passwordSalt,
                 Email = email,
-                Password = HashPassword(password), // Mã hóa mật khẩu
-                DateOfBirth = dateOfBirth,
                 Address = address,
+                PhoneNumber = phoneNumber,
+                DateOfBirth = dateOfBirth,
+                UserCode = userCode,
                 Role = role,
             };
 
-            _dbContext.Users.Add(user);
-            _dbContext.SaveChanges(); // Lưu thay đổi vào cơ sở dữ liệu
-            return user;
-        }
-
-
-        public async Task<User> LoginAsync(string userNameOrEmail, string password)
-        {
-            // Kiểm tra xem `userNameOrEmail` có phải là UserName hoặc Email
-            var user = await _dbContext.Users
-                .Where(u => u.UserName == userNameOrEmail || u.Email == userNameOrEmail)
-                .SingleOrDefaultAsync();
-
-            if (user == null)
+            // Kiểm tra xác nhận mật khẩu
+            if (password != confirmPassword)
             {
-                throw new Exception("Người dùng không tồn tại.");
+                throw new Exception("Mật khẩu và xác nhận mật khẩu không khớp.");
             }
 
-            // Kiểm tra mật khẩu
-            if (user.Password != HashPassword(password))
+            // Lưu người dùng vào cơ sở dữ liệu
+            await _dbContext.Users.AddAsync(newUser);
+            await _dbContext.SaveChangesAsync();
+            return newUser;
+        }
+
+        public async Task<IActionResult> Login(string username, string password)
+        {
+            if (string.IsNullOrEmpty(password))
             {
                 throw new Exception("Mật khẩu không đúng.");
             }
 
-            // Trả về thông tin người dùng sau khi đăng nhập
-            return user;
+            if (string.IsNullOrEmpty(username))
+            {
+                throw new Exception("Tên đăng nhập hoặc Email không tồn tại.");
+            }
+
+            // Tìm kiếm người dùng trong cơ sở dữ liệu
+            var existingUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (existingUser == null)
+            {
+                throw new ArgumentException("Invalid username or password.");
+            }
+
+            // Kiểm tra mật khẩu
+            if (!VerifyPasswordHash(password, existingUser.PasswordHash, existingUser.PasswordSalt))
+            {
+                throw new ArgumentException("Invalid username or password.");
+            }
+
+            string token = CreateToken(existingUser);
+
+            var refreshToken = GenerateRefreshToken();
+            SetRefreshToken(refreshToken, existingUser);
+
+            return new ObjectResult(token) { StatusCode = 200 };
         }
 
-        // Phương thức để kiểm tra định dạng email
-        private bool IsValidEmail(string email)
+
+        public async Task<IActionResult> RefreshUserTokenAsync(User user)
         {
-            try
+            if (user == null)
             {
-                var addr = new System.Net.Mail.MailAddress(email);
-                return addr.Address == email;
+                return new ObjectResult("User is null") { StatusCode = 400 };
             }
-            catch
+            var refreshToken = _httpContextAccessor.HttpContext.Request.Cookies["refreshToken"];
+
+            if (!user.RefreshToken.Equals(refreshToken))
             {
-                return false;
+                return new ObjectResult("Invalid Refresh Token") { StatusCode = 401 };
+            }
+            else if (user.TokenExpires < DateTime.Now)
+            {
+                return new ObjectResult("Token expired") { StatusCode = 401 };
+            }
+
+            string token = CreateToken(user);
+            var newRefreshToken = GenerateRefreshToken();
+            SetRefreshToken(newRefreshToken, user);
+
+            return new ObjectResult(token) { StatusCode = 200 };
+        }
+
+
+
+
+
+        // Khu vực xử lý token 
+        private RefreshToken GenerateRefreshToken()
+        {
+            var refreshToken = new RefreshToken
+            {
+                Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
+                Expires = DateTime.Now.AddDays(7),
+                Created = DateTime.Now
+            };
+
+            return refreshToken;
+        }
+
+
+        private void SetRefreshToken(RefreshToken newRefreshToken, User user)
+        {
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Expires = newRefreshToken.Expires
+            };
+            _httpContextAccessor.HttpContext.Response.Cookies.Append("refreshToken", newRefreshToken.Token, cookieOptions);
+
+            user.RefreshToken = newRefreshToken.Token;
+            user.TokenCreated = newRefreshToken.Created;
+            user.TokenExpires = newRefreshToken.Expires;
+        }
+
+        private string CreateToken(User user)
+        {
+            List<Claim> claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.Role, "Admin"),
+            };
+
+            var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(
+                _configuration.GetSection("AppSettings:Token").Value));
+
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+
+            var token = new JwtSecurityToken(
+                claims: claims,
+                expires: DateTime.Now.AddDays(1),
+                signingCredentials: creds);
+
+            var jwt = new JwtSecurityTokenHandler().WriteToken(token);
+
+            return jwt;
+        }
+
+        private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
+        {
+            using (var hmac = new HMACSHA512())
+            {
+                passwordSalt = hmac.Key;
+                passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
             }
         }
 
-        // Phương thức để mã hóa mật khẩu
-        private string HashPassword(string password)
+        private bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
         {
-            using (SHA256 sha256 = SHA256.Create())
+            using (var hmac = new HMACSHA512(passwordSalt))
             {
-                byte[] hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-                StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < hashedBytes.Length; i++)
-                {
-                    builder.Append(hashedBytes[i].ToString("x2"));
-                }
-                return builder.ToString();
+                var computedHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+                return computedHash.SequenceEqual(passwordHash);
             }
         }
     }

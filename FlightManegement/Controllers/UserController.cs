@@ -1,8 +1,9 @@
-﻿using FlightManegement.Interfaces;
+﻿using Microsoft.AspNetCore.Mvc;
+using FlightManegement.Services;
+using System;
+using System.Threading.Tasks;
+using FlightManegement.Interfaces;
 using FlightManegement.Models;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 
 namespace FlightManegement.Controllers
 {
@@ -11,43 +12,64 @@ namespace FlightManegement.Controllers
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
-        public static User user = new User();
-        private readonly IConfiguration _configuration;
 
-        public UserController(IUserService userService, IConfiguration configuration)
+        public UserController(IUserService userService)
         {
             _userService = userService;
-            _configuration = configuration;
-
         }
 
-
-
-        [HttpPost("register")]
-        public IActionResult Register(string userName, string email, string password, string confirmPassword, DateTime dateOfBirth, string address)
-        {
-            var registeredUser = _userService.Register(userName, email, password, confirmPassword, dateOfBirth, address);
-
-            if (registeredUser == null)
-            {
-                return BadRequest(new { message = "Email đã tồn tại." });
-            }
-
-            return Ok(registeredUser);
-        }
-
-        [HttpPost("login")]
-        public async Task<IActionResult> Login(string userNameOrEmail, string password)
+        [HttpPost("Register")]
+        public async Task<IActionResult> Register(string username, string password, string email, string address, string phoneNumber, DateTime dateOfBirth, string confirmpassword)
         {
             try
             {
-                User userlogin = await _userService.LoginAsync(userNameOrEmail, password);
-                return Ok(userlogin);
+                var result = await _userService.Register(username, password, email, address, phoneNumber, dateOfBirth, confirmpassword);
+                if (result == null)
+                {
+                    return BadRequest("User registration failed.");
+                }
+
+                return Ok("User registered successfully.");
             }
             catch (Exception ex)
             {
-                return Unauthorized(ex.Message);
+                return BadRequest($"User registration failed: {ex.Message}");
             }
         }
+
+
+        [HttpPost("Login")]
+        public async Task<IActionResult> Login(string username, string password)
+        {
+            try
+            {
+                var token = await _userService.Login(username, password);
+                if (token == null)
+                {
+                    return Unauthorized("Sai tên đăng nhập hoặc mật khẩu");
+                }
+
+                return Ok(token);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Login failed: {ex.Message}");
+            }
+        }
+
+     /*   [HttpPost("Refresh-Token")]
+        public async Task<IActionResult> RefreshToken()
+        {
+            try
+            {
+                User currentUser = HttpContext.Items["user"] as User;
+                var token = await _userService.RefreshUserTokenAsync(currentUser);
+                return Ok(token);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Token refresh failed: {ex.Message}");
+            }
+        }*/
     }
 }

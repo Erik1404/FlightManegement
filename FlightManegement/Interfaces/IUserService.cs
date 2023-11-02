@@ -1,12 +1,13 @@
 ﻿using FlightManegement.Models;
+using Microsoft.AspNetCore.Mvc;
 using System.Net.NetworkInformation;
 
 namespace FlightManegement.Interfaces
 {
     public interface IUserService
     {
-        User Register(string userName, string email, string password, string confirmPassword, DateTime dateOfBirth, string address);
-        Task<User> LoginAsync(string userNameOrEmail, string password);
-     
+        Task<User> Register(string username, string password, string email, string address, string phoneNumber, DateTime dateOfBirth, string confirmPassword);
+        Task<IActionResult> Login(string username, string password);
+        Task<IActionResult> RefreshUserTokenAsync(User user);
     }
 }

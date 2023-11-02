@@ -1,7 +1,10 @@
 ﻿using FlightManegement.Interfaces;
 using FlightManegement.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Data;
+using System.Security.Claims;
 
 namespace FlightManegement.Controllers
 {
@@ -36,19 +39,24 @@ namespace FlightManegement.Controllers
             return Ok(Groups);
         }
 
-        [HttpPost("Add Group")]
-        public async Task<ActionResult<Group>> AddGroup(string Group_Name,string Group_Desc)
+        [HttpPost("Add Group"), Authorize(Roles = "Admin")]
+        
+        public async Task<ActionResult<Group>> AddGroup(string Group_Name, string Group_Desc)
         {
-            var add = await _GroupService.AddGroup(Group_Name, Group_Desc);
-            if (add != null)
-            {
-                return Ok(new { message = "Thêm nhóm mới thành công", Group = add });
+           
+                var add = await _GroupService.AddGroup(Group_Name, Group_Desc);
+                if (add != null)
+                {
+                    return Ok(new { message = "Thêm nhóm mới thành công", Group = add });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Thêm nhóm mới thất bại" });
+                }
             }
-            else
-            {
-                return BadRequest(new { message = "Thêm nhóm mới thất bại" });
-            }
+
         }
+
 
         [HttpDelete("Delete Group")]
         public async Task<ActionResult> DeleteGroup(int GroupId)
