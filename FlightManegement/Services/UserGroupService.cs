@@ -22,10 +22,20 @@ namespace FlightManegement.Services
                 {
                     return false; // User is already in the group
                 }
+                if (userId == 0 || groupId == 0)
+                {
+                    throw new Exception("UserId không hợp lệ.");
+                }
 
+             
                 var user = _dbContext.Users.FirstOrDefault(u => u.UserId == userId);
                 var group = _dbContext.Groups.FirstOrDefault(g => g.GroupId == groupId);
 
+                // Kiểm tra xem người dùng có role Admin không
+                if (user != null && user.Role == "Admin")
+                {
+                    throw new Exception("Không thể thêm Admin vào nhóm.");
+                }
                 if (user != null && group != null)
                 {
                     user.Role = group.Group_Name; // Update user's role based on the group name

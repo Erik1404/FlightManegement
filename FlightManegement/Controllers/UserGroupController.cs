@@ -17,10 +17,12 @@ namespace FlightManegement.Controllers
             _userGroupService = userGroupService;
         }
 
-        [HttpPost("addusertogroup"), Authorize(Roles = "Admin")]
+        [HttpPost("addusertogroup")]
+        [Authorize]
         public async Task<IActionResult> AddUserToGroup(int userId,int groupId)
         {
-
+            if (User.HasClaim(ClaimTypes.Role, "Admin"))
+            {
                 bool result = await _userGroupService.AddUserToGroupAsync(userId, groupId);
 
                 if (result)
@@ -29,7 +31,8 @@ namespace FlightManegement.Controllers
                 }
 
                 return BadRequest("Failed to add user to group.");
-
+            }
+            return Unauthorized(new { message = "Bạn không có quyền thực hiện tác vụ này" });
         }
     }
 }

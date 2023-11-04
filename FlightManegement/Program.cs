@@ -3,6 +3,7 @@ using FlightManegement.Interfaces;
 using FlightManegement.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Filters;
@@ -33,9 +34,9 @@ builder.Services.AddScoped<IUserGroupService, UserGroupService>();
 
 builder.Services.AddSwaggerGen(options =>
 {
-    options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+    options.AddSecurityDefinition("Xin chào người dùng", new OpenApiSecurityScheme
     {
-        Description = "Standard Authorization header using the Bearer scheme (\"bearer {token}\")",
+        Description = "Xin hãy đăng nhập để lấy token sử dụng các chức năng",
         In = ParameterLocation.Header,
         Name = "Authorization",
         Type = SecuritySchemeType.ApiKey
@@ -50,12 +51,26 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8
-                .GetBytes(builder.Configuration.GetSection("AppSettings:Token").Value)),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration.GetSection("AppSettings:Token").Value)),
             ValidateIssuer = false,
             ValidateAudience = false
         };
+
+        // Thêm "Bearer" vào đầu token
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                if (context.Request.Headers.ContainsKey("Authorization"))
+                {
+                    var token = context.Request.Headers["Authorization"].ToString();
+                    context.Token = token.StartsWith("Bearer ") ? token.Substring(7) : token;
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
+
 builder.Services.AddCors(options => options.AddPolicy(name: "NgOrigins",
     policy =>
     {

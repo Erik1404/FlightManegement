@@ -39,11 +39,13 @@ namespace FlightManegement.Controllers
             return Ok(Groups);
         }
 
-        [HttpPost("Add Group"), Authorize(Roles = "Admin")]
-        
+        [HttpPost("Add Group")]
+        [Authorize]
         public async Task<ActionResult<Group>> AddGroup(string Group_Name, string Group_Desc)
         {
-           
+            // Với nhiều Role thì if (User.HasClaim(ClaimTypes.Role, "Admin") || User.HasClaim(ClaimTypes.Role, "Pilot"))
+            if (User.HasClaim(ClaimTypes.Role, "Admin"))
+            {
                 var add = await _GroupService.AddGroup(Group_Name, Group_Desc);
                 if (add != null)
                 {
@@ -55,6 +57,8 @@ namespace FlightManegement.Controllers
                 }
             }
 
+            // Xử lý trường hợp người dùng không có role "Admin"
+            return Unauthorized(new { message = "Bạn không có quyền thực hiện tác vụ này" });
         }
 
 
