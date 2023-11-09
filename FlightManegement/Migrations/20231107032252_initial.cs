@@ -18,11 +18,11 @@ namespace FlightManegement.Migrations
                     FlightId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     FlightName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    FlightBrand = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    DepartureAirport = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ArrivalAirport = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    DepartureTime = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    ArrivalTime = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    FlightNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Depart = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Destination = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {

@@ -15,6 +15,8 @@ namespace FlightManegement.Data
 
         public DbSet<Group> Groups { get; set; }
         public DbSet<UserGroup> UserGroups { get; set; }
+        public DbSet<FlightAssignment> FlightAssignments { get; set; }
+
 
     }
 }

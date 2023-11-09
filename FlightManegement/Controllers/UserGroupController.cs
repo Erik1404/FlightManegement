@@ -27,10 +27,10 @@ namespace FlightManegement.Controllers
 
                 if (result)
                 {
-                    return Ok("User added to group successfully.");
+                    return Ok("Thêm Thành công");
                 }
 
-                return BadRequest("Failed to add user to group.");
+                return BadRequest("Lỗi khi thêm nhân viên này vào nhóm");
             }
             return Unauthorized(new { message = "Bạn không có quyền thực hiện tác vụ này" });
         }

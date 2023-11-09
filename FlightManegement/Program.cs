@@ -1,4 +1,5 @@
-﻿using FlightManegement.Data;
+﻿using FlightManagement.Services;
+using FlightManegement.Data;
 using FlightManegement.Interfaces;
 using FlightManegement.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -30,11 +31,12 @@ builder.Services.AddScoped<IFlightService, FlightService>();
 builder.Services.AddScoped<IGroupService, GroupService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserGroupService, UserGroupService>();
+builder.Services.AddScoped<IFlightAssignmentService, FlightAssignmentService>();
 
 
 builder.Services.AddSwaggerGen(options =>
 {
-    options.AddSecurityDefinition("Xin chào người dùng", new OpenApiSecurityScheme
+    options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
     {
         Description = "Xin hãy đăng nhập để lấy token sử dụng các chức năng",
         In = ParameterLocation.Header,

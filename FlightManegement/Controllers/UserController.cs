@@ -4,6 +4,8 @@ using System;
 using System.Threading.Tasks;
 using FlightManegement.Interfaces;
 using FlightManegement.Models;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace FlightManegement.Controllers
 {
@@ -57,19 +59,36 @@ namespace FlightManegement.Controllers
             }
         }
 
-     /*   [HttpPost("Refresh-Token")]
-        public async Task<IActionResult> RefreshToken()
+        [HttpPut("{id}")]
+        [Authorize]
+        public IActionResult UpdateUser(int id, UserDto userDto)
         {
-            try
+            if (User.HasClaim(ClaimTypes.Role, "Admin"))
             {
-                User currentUser = HttpContext.Items["user"] as User;
-                var token = await _userService.RefreshUserTokenAsync(currentUser);
-                return Ok(token);
+                var updatedUser = _userService.UpdateUser(id, userDto);
+                if (updatedUser == null)
+                {
+                    return NotFound();
+                }
+                return Ok(updatedUser);
             }
-            catch (Exception ex)
-            {
-                return BadRequest($"Token refresh failed: {ex.Message}");
-            }
-        }*/
+            return Unauthorized(new { message = "Bạn không có quyền thực hiện tác vụ này" });
+        }
+
+
+        /*   [HttpPost("Refresh-Token")]
+           public async Task<IActionResult> RefreshToken()
+           {
+               try
+               {
+                   User currentUser = HttpContext.Items["user"] as User;
+                   var token = await _userService.RefreshUserTokenAsync(currentUser);
+                   return Ok(token);
+               }
+               catch (Exception ex)
+               {
+                   return BadRequest($"Token refresh failed: {ex.Message}");
+               }
+           }*/
     }
 }

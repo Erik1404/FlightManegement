@@ -152,6 +152,32 @@ namespace FlightManegement.Services
         }
 
 
+
+        // Update user 
+        public async Task<bool> UpdateUser(int userId, UserDto userDto)
+        {
+            // Tìm kiếm người dùng cần cập nhật
+            var user = await _dbContext.Users.FindAsync(userId);
+
+            if (user == null)
+            {
+                throw new Exception("Người dùng không tồn tại");
+            }
+
+            // Cập nhật thông tin người dùng từ UserDto
+            user.Username = userDto.Username;
+            user.Email = userDto.Email;
+            user.Address = userDto.Address;
+            user.PhoneNumber = userDto.PhoneNumber;
+            user.DateOfBirth = userDto.DateOfBirth;
+
+            // Lưu thay đổi vào cơ sở dữ liệu
+            _dbContext.Users.Update(user);
+            await _dbContext.SaveChangesAsync();
+            return true;
+        }
+
+
         // Khu vực xử lý token 
         private RefreshToken GenerateRefreshToken()
         {
