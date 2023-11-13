@@ -17,16 +17,13 @@ namespace FlightManegement.Controllers
             _flightDocService = flightDocService;
         }
 
-        // POST api/flightdocs
-        // POST api/flightdocs/create
         [HttpPost("create")]
-        [Authorize] // Đảm bảo chỉ người dùng đã xác thực mới có thể tạo tài liệu
+        [Authorize] 
         public async Task<IActionResult> CreateFlightDoc(int flightId, string documentName, string type)
         {
             if (User.HasClaim(ClaimTypes.Role, "Admin") || User.HasClaim(ClaimTypes.Role, "Pilot"))
             {
 
-                // Lấy thông tin người dùng từ token đã xác thực
                 var userName = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value;
 
                 if (string.IsNullOrEmpty(userName))
@@ -34,7 +31,6 @@ namespace FlightManegement.Controllers
                     return Unauthorized("Không thể xác định thông tin người dùng.");
                 }
 
-                // Kiểm tra thông tin đầu vào
                 if (string.IsNullOrWhiteSpace(documentName) || string.IsNullOrWhiteSpace(type))
                 {
                     return BadRequest("Cần cung cấp đầy đủ thông tin tên tài liệu và loại tài liệu.");
@@ -42,15 +38,12 @@ namespace FlightManegement.Controllers
 
                 try
                 {
-                    // Gọi dịch vụ để tạo FlightDoc mới với thông tin đã cung cấp
                     var flightDoc = await _flightDocService.CreateFlightDocAsync(flightId, documentName, type, userName);
 
-                    // Nếu tạo thành công, trả về thông tin của FlightDoc mới tạo
                     return CreatedAtAction(nameof(GetFlightDoc), new { flightDocId = flightDoc.FlightDocId }, flightDoc);
                 }
                 catch (Exception ex)
                 {
-                    // Log và xử lý ngoại lệ
                     return StatusCode(500, "Có lỗi xảy ra khi tạo tài liệu mới: " + ex.Message);
                 }
             }
@@ -58,7 +51,6 @@ namespace FlightManegement.Controllers
         }
 
 
-        // GET api/flightdocs/5
         [HttpGet("{flightDocId}")]
         public async Task<IActionResult> GetFlightDoc(int flightDocId)
         {
@@ -79,7 +71,6 @@ namespace FlightManegement.Controllers
             }
         }
 
-        // DELETE api/flightdocs/5
         [HttpDelete("{flightDocId}")]
         public async Task<IActionResult> DeleteFlightDoc(int flightDocId)
         {
@@ -92,7 +83,6 @@ namespace FlightManegement.Controllers
             return NoContent();
         }
 
-        // PUT api/flightdocs/5
         [HttpPut("{flightDocId}")]
         public async Task<IActionResult> UpdateFlightDoc(int flightDocId, string documentName, double version, string filePath)
         {
@@ -113,7 +103,6 @@ namespace FlightManegement.Controllers
             }
         }
 
-        // Các phương thức khác nếu cần
     }
 
 }

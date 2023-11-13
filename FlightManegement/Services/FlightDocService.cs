@@ -17,13 +17,10 @@ namespace FlightManegement.Services
 
         public async Task<FlightDoc> CreateFlightDocAsync(int flightId, string documentName, string type, string creator)
         {
-            // Tạo PDF với thông tin chuyến bay
             var pdfData = await _pdfService.GenerateFlightInfoPdf(flightId);
-
             // Lưu trữ PDF vào hệ thống tệp và lấy đường dẫn
             var filePath = SavePdfToFileSystem(pdfData, documentName);
 
-            // Tạo đối tượng FlightDoc mới và lưu vào cơ sở dữ liệu
             var flightDoc = new FlightDoc
             {
                 FlightId = flightId,
@@ -42,14 +39,13 @@ namespace FlightManegement.Services
 
         public async Task<FlightDoc> UpdateFlightDocAsync(int flightDocId, string documentName, double version, string filePath)
         {
-            // Tìm và cập nhật thông tin của FlightDoc
             var flightDoc = await _dbContext.FlightDocs.FindAsync(flightDocId);
             if (flightDoc == null)
                 throw new InvalidOperationException("FlightDoc not found.");
 
             flightDoc.DocumentName = documentName;
             flightDoc.Version = version;
-            flightDoc.FilePath = filePath; // Chỉ cập nhật nếu có file mới được tạo
+            flightDoc.FilePath = filePath;
 
             _dbContext.FlightDocs.Update(flightDoc);
             await _dbContext.SaveChangesAsync();
@@ -81,22 +77,17 @@ namespace FlightManegement.Services
 
         private string SavePdfToFileSystem(byte[] pdfData, string documentName)
         {
-            // Lấy đường dẫn đến thư mục MyDocuments của người dùng hiện tại.
             var documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 
-            // Đặt tên thư mục con mà bạn muốn lưu trữ tài liệu PDF.
             var storageFolder = Path.Combine(documentsPath, "MyFlightDocs");
 
-            // Đảm bảo rằng thư mục tồn tại.
-            Directory.CreateDirectory(storageFolder); // Nếu thư mục đã tồn tại, hàm này sẽ không tạo mới.
+            Directory.CreateDirectory(storageFolder); 
             var uniqueFileName = $"{Guid.NewGuid()}_{documentName}.pdf";
             var filePath = Path.Combine(storageFolder, uniqueFileName);
             File.WriteAllBytes(filePath, pdfData);
             return filePath;
         }
-
-
-        // Các phương thức khác nếu cần
     }
 
-}
+/*    Tham khảo pdf itextsharp https://www.youtube.com/watch?v=sQOf8qVYaX0&list=PL9VntEIxiRgd3yNTIIsYO1znwa5Z1qrEf
+*/}

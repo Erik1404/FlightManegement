@@ -42,7 +42,7 @@ public class PdfService : IPdfService
                 using (var pdf = new PdfDocument(writer))
                 {
                     var document = new Document(pdf);
-                    // Đường dẫn đến font hỗ trợ tiếng Việt cần được chỉ định chính xác
+                    // Đường dẫn đến font hỗ trợ tiếng Việt
                     string fontPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "ARIAL.TTF");
                     PdfFont font = PdfFontFactory.CreateFont(fontPath, PdfEncodings.IDENTITY_H, PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED);
                     document.SetFont(font);
@@ -64,7 +64,6 @@ public class PdfService : IPdfService
                         })
                         .ToList();
 
-                    // Kiểm tra xem có thông tin phi công nào không và thêm vào tài liệu.
                     if (pilotDetails.Any())
                     {
                         document.Add(new Paragraph("Phi công:").SetFont(font).SetBold());

@@ -13,7 +13,7 @@ public class FlightPdfController : ControllerBase
         _pdfService = pdfService;
     }
 
-    // GET: /FlightPdf/5
+    // GET: /FlightPdf/ID
     [HttpGet("{flightId}")]
     public async Task<IActionResult> GetFlightInfoAsPdf(int flightId)
     {
@@ -24,12 +24,10 @@ public class FlightPdfController : ControllerBase
             {
                 return NotFound("Không thể tạo tài liệu PDF cho chuyến bay này.");
             }
-            // Trả về file PDF với Content-Type là application/pdf
             return File(pdfBytes, "application/pdf", $"FlightInfo_{flightId}.pdf");
         }
         catch (InvalidOperationException ex)
         {
-            // Trả về lỗi 404 với thông báo cụ thể từ service
             return NotFound(ex.Message);
         }
     }
