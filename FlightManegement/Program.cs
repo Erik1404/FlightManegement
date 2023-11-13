@@ -32,6 +32,9 @@ builder.Services.AddScoped<IGroupService, GroupService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserGroupService, UserGroupService>();
 builder.Services.AddScoped<IFlightAssignmentService, FlightAssignmentService>();
+builder.Services.AddScoped<IPdfService, PdfService>();
+builder.Services.AddScoped<IFlightDocService, FlightDocService>();
+
 
 
 builder.Services.AddSwaggerGen(options =>

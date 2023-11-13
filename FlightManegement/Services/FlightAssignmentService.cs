@@ -20,18 +20,31 @@ namespace FlightManegement.Services
             var userGroup = await _dbContext.UserGroups
                                             .Include(ug => ug.User)
                                             .FirstOrDefaultAsync(ug => ug.UserGroupId == userGroupId);
-            if (userGroup == null) return false;
+            if (userGroup == null)
+                throw new InvalidOperationException("UserGroup không tồn tại.");
 
             var role = userGroup.User.Role;
             var count = await _dbContext.FlightAssignments
+                                        .Include(fa => fa.UserGroup)
+                                        .ThenInclude(ug => ug.User)
                                         .CountAsync(fa => fa.FlightId == flightId && fa.UserGroup.User.Role == role);
 
-            // Logic for limiting the number of pilots and crew members...
-            // ...
+            // Logic for limiting the number of pilots and crew members
+            const int maxPilots = 2;
+            const int maxCrew = 5;
+            if (role == "Pilot" && count >= maxPilots)
+            {
+                throw new InvalidOperationException("Đã đạt giới hạn số lượng phi công cho chuyến bay này.");
+            }
+            if (role == "Crew" && count >= maxCrew)
+            {
+                throw new InvalidOperationException("Đã đạt giới hạn số lượng tiếp viên cho chuyến bay này.");
+            }
 
             // Retrieve the flight to check its departure and arrival times
             var flightToAssign = await _dbContext.Flights.FindAsync(flightId);
-            if (flightToAssign == null) return false;
+            if (flightToAssign == null)
+                throw new InvalidOperationException("Chuyến bay không tồn tại.");
 
             // Check for time conflicts with existing assignments for the user
             var assignmentsForUser = await _dbContext.FlightAssignments
@@ -44,7 +57,7 @@ namespace FlightManegement.Services
                 if (flightToAssign.DepartureTime < assignment.Flight.ArrivalTime &&
                     flightToAssign.ArrivalTime > assignment.Flight.DepartureTime)
                 {
-                    return false; // There is a time conflict with another flight
+                    throw new InvalidOperationException("Có xung đột thời gian với các chuyến bay đã được phân công.");
                 }
             }
 
@@ -60,6 +73,7 @@ namespace FlightManegement.Services
 
             return true;
         }
+
 
 
         public async Task<bool> RemoveUserFromFlight(int userGroupId, int flightId)
